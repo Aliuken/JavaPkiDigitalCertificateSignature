@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-import com.udemy.pki.model.CertificateData;
+import com.aliuken.pki.model.CertificateData;
 
 public class KeyStoreService {
 	public CertificateData getCertificateDataFromJavaKeyStore() {
