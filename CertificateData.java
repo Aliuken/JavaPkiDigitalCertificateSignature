@@ -1,4 +1,4 @@
-package com.udemy.pki.model;
+package com.aliuken.pki.model;
 
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
