@@ -1,6 +1,6 @@
-package com.udemy.pki.service;
+package com.aliuken.pki.service;
 
-import com.udemy.pki.model.CertificateData;
+import com.aliuken.pki.model.CertificateData;
 
 public interface SignatureService {
     void sign(CertificateData certificateData);
