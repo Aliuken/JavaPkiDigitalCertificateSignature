@@ -1,4 +1,4 @@
-package com.udemy.pki.service;
+package com.aliuken.pki.service;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -34,7 +34,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 
-import com.udemy.pki.model.CertificateData;
+import com.aliuken.pki.model.CertificateData;
 import org.xml.sax.SAXException;
 
 public class XmlSignatureService implements SignatureService {
@@ -72,7 +72,7 @@ public class XmlSignatureService implements SignatureService {
 
 	        DOMSignContext domSignContext = new DOMSignContext(certificateData.privateKey(), document.getDocumentElement());
 	        domSignContext.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
-	        XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "FirmaUdemy", null);
+	        XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "Firmaaliuken", null);
 	        xmlSignature.sign(domSignContext);
 
 	        ByteArrayOutputStream newDocument = new ByteArrayOutputStream();
