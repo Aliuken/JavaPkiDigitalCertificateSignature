@@ -4,8 +4,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
@@ -13,6 +12,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 
+import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfDate;
 import com.itextpdf.text.pdf.PdfDictionary;
@@ -31,6 +31,8 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 
 public class PdfSignatureService implements SignatureService {
+    private static final int ESTIMATED_CONTENT = 8192;
+
     @Override
     public void sign(CertificateData certificateData) {
         byte[] documentContent;
@@ -62,26 +64,8 @@ public class PdfSignatureService implements SignatureService {
             PdfStamper pdfStamper = PdfStamper.createSignature(pdfReader, outputStream, '\000', null, true);
             PdfSignatureAppearance pdfSignatureAppearance = PdfSignatureService.getPdfSignatureAppearance(certificateData, pdfStamper);
 
-            int estimatedContent = 8192;
             System.out.println(pdfReader.getFileLength());
-            HashMap<PdfName, Integer> exclusionSizes = new HashMap<>();
-            exclusionSizes.put(PdfName.CONTENTS, Integer.valueOf(estimatedContent * 2 + 2));
-            pdfSignatureAppearance.preClose(exclusionSizes);
-
-            byte[] hashBytes = PdfSignatureService.getHashBytes(pdfSignatureAppearance, estimatedContent);
-            Calendar signatureCalendar = pdfSignatureAppearance.getSignDate();
-
-            PdfPKCS7 sgn = new PdfPKCS7(certificateData.privateKey(), certificateData.certificateChain(), null, "SHA-256", null, false);
-            byte[] sh = sgn.getAuthenticatedAttributeBytes(hashBytes, signatureCalendar, null);
-            sgn.update(sh, 0, sh.length);
-            byte[] encodedSig = sgn.getEncodedPKCS7(hashBytes, signatureCalendar, null, null);
-
-            byte[] paddedSig = new byte[estimatedContent];
-            System.arraycopy(encodedSig, 0, paddedSig, 0, encodedSig.length);
-            PdfDictionary pdfDic = new PdfDictionary();
-            pdfDic.put(PdfName.CONTENTS, new PdfString(paddedSig).setHexWriting(true));
-            pdfSignatureAppearance.close(pdfDic);
-
+            PdfSignatureService.signEnding(certificateData, pdfSignatureAppearance);
             outputStream.flush();
 
             byte[] result = outputStream.toByteArray();
@@ -91,13 +75,6 @@ public class PdfSignatureService implements SignatureService {
             return null;
         }
 	}
-
-	private static Calendar getCalendarFromDate(Date date) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-
-        return calendar;
-    }
 
     private static PdfSignatureAppearance getPdfSignatureAppearance(CertificateData certificateData, PdfStamper pdfStamper) throws CertificateEncodingException {
         Date currentDate = new Date();
@@ -123,6 +100,13 @@ public class PdfSignatureService implements SignatureService {
         return pdfSignatureAppearance;
     }
 
+    private static Calendar getCalendarFromDate(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar;
+    }
+
     private static String getCNFromPublicCertificate(X509Certificate publicCertificate) throws CertificateEncodingException {
         X500Name x500name = new JcaX509CertificateHolder(publicCertificate).getSubject();
         RDN cn = x500name.getRDNs(BCStyle.CN)[0];
@@ -130,11 +114,42 @@ public class PdfSignatureService implements SignatureService {
         return IETFUtils.valueToString(cn.getFirst().getValue());
     }
 
-    private static byte[] getHashBytes(PdfSignatureAppearance pdfSignatureAppearance, int estimatedContent) throws IOException, NoSuchAlgorithmException {
+    private static void signEnding(CertificateData certificateData, PdfSignatureAppearance pdfSignatureAppearance) throws DocumentException, IOException, NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, SignatureException {
+        HashMap<PdfName, Integer> exclusionSizes = new HashMap<>();
+        exclusionSizes.put(PdfName.CONTENTS, Integer.valueOf(ESTIMATED_CONTENT * 2 + 2));
+
+        pdfSignatureAppearance.preClose(exclusionSizes);
+
+        byte[] pkcs7SignedDataBytes = PdfSignatureService.getPKCS7SignedDataBytes(certificateData, pdfSignatureAppearance);
+
+        PdfDictionary pdfDictionary = new PdfDictionary();
+        pdfDictionary.put(PdfName.CONTENTS, new PdfString(pkcs7SignedDataBytes).setHexWriting(true));
+
+        pdfSignatureAppearance.close(pdfDictionary);
+    }
+
+    private static byte[] getPKCS7SignedDataBytes(CertificateData certificateData, PdfSignatureAppearance pdfSignatureAppearance) throws NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, IOException, SignatureException {
+        PdfPKCS7 pdfPKCS7 = new PdfPKCS7(certificateData.privateKey(), certificateData.certificateChain(), null, "SHA-256", null, false);
+        byte[] hashBytes = PdfSignatureService.getHashBytes(pdfSignatureAppearance);
+        Calendar signatureCalendar = pdfSignatureAppearance.getSignDate();
+
+        byte[] authenticatedAttributeBytes = pdfPKCS7.getAuthenticatedAttributeBytes(hashBytes, signatureCalendar, null);
+        pdfPKCS7.update(authenticatedAttributeBytes, 0, authenticatedAttributeBytes.length);
+
+        byte[] pkcs7SignedDataBytes = pdfPKCS7.getEncodedPKCS7(hashBytes, signatureCalendar, null, null);
+
+        byte[] pkcs7SignedDataBytesCopy = new byte[ESTIMATED_CONTENT];
+        System.arraycopy(pkcs7SignedDataBytes, 0, pkcs7SignedDataBytesCopy, 0, pkcs7SignedDataBytes.length);
+
+        return pkcs7SignedDataBytesCopy;
+    }
+
+    private static byte[] getHashBytes(PdfSignatureAppearance pdfSignatureAppearance) throws IOException, NoSuchAlgorithmException {
         InputStream rangeStream = pdfSignatureAppearance.getRangeStream();
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-        byte[] buffer = new byte[estimatedContent];
+        byte[] buffer = new byte[ESTIMATED_CONTENT];
+
         int length;
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
         while ((length = rangeStream.read(buffer)) > 0) {
             messageDigest.update(buffer, 0, length);
         }

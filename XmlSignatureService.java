@@ -28,6 +28,8 @@ import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -72,15 +74,12 @@ public class XmlSignatureService implements SignatureService {
 
 	        DOMSignContext domSignContext = new DOMSignContext(certificateData.privateKey(), document.getDocumentElement());
 	        domSignContext.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
-	        XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "Firmaaliuken", null);
+
+	        XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "signatureId", null);
 	        xmlSignature.sign(domSignContext);
 
-	        ByteArrayOutputStream newDocument = new ByteArrayOutputStream();
-	        TransformerFactory tf = TransformerFactory.newInstance();
-	        Transformer trans = tf.newTransformer();
-	        trans.transform(new DOMSource(document), new StreamResult(newDocument));
-	        
-	        return newDocument.toByteArray();
+			byte[] newDocumentBytes = XmlSignatureService.getNewDocumentBytes(document);
+	        return newDocumentBytes;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
@@ -126,5 +125,17 @@ public class XmlSignatureService implements SignatureService {
 		Document document = documentBuilderFactory.newDocumentBuilder().parse(is);
 
 		return document;
+	}
+
+	private static byte[] getNewDocumentBytes(Document document) throws TransformerException {
+		TransformerFactory transformerFactory = TransformerFactory.newInstance();
+		Transformer transformer = transformerFactory.newTransformer();
+
+		ByteArrayOutputStream newDocument = new ByteArrayOutputStream();
+		transformer.transform(new DOMSource(document), new StreamResult(newDocument));
+
+		byte[] newDocumentBytes = newDocument.toByteArray();
+
+		return newDocumentBytes;
 	}
 }
