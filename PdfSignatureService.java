@@ -60,7 +60,7 @@ public class PdfSignatureService implements SignatureService {
     }
 
     @Override
-	public byte[] sign(byte[] documentContent, CertificateData certificateData) {
+    public byte[] sign(byte[] documentContent, CertificateData certificateData) {
         try(AutocloseablePdfReader pdfReader = new AutocloseablePdfReader(documentContent);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
@@ -77,7 +77,7 @@ public class PdfSignatureService implements SignatureService {
             e.printStackTrace();
             return null;
         }
-	}
+    }
 
     private static PdfSignatureAppearance getPdfSignatureAppearance(CertificateData certificateData, PdfStamper pdfStamper) throws CertificateEncodingException {
         Date currentDate = new Date();
