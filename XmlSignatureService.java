@@ -96,7 +96,8 @@ public class XmlSignatureService implements SignatureService {
 
 	private static SignedInfo getSignedInfo(XMLSignatureFactory xmlSignatureFactory, Reference reference) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
 		CanonicalizationMethod canonicalizationMethod = xmlSignatureFactory.newCanonicalizationMethod(CanonicalizationMethod.INCLUSIVE, (C14NMethodParameterSpec) null);
-		SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA1, null);
+		//SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA1, null);
+		SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA256, null);
 		List<Reference> references = Collections.singletonList(reference);
 		SignedInfo signedInfo = xmlSignatureFactory.newSignedInfo(canonicalizationMethod, signatureMethod, references);
 

@@ -17,13 +17,16 @@ import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfDate;
 import com.itextpdf.text.pdf.PdfDictionary;
 import com.itextpdf.text.pdf.PdfName;
-import com.itextpdf.text.pdf.PdfPKCS7;
+//import com.itextpdf.text.pdf.PdfPKCS7;
 import com.itextpdf.text.pdf.PdfSignature;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.itextpdf.text.pdf.PdfString;
 import com.aliuken.pki.model.CertificateData;
 import com.aliuken.pki.reader.AutocloseablePdfReader;
+import com.itextpdf.text.pdf.security.BouncyCastleDigest;
+import com.itextpdf.text.pdf.security.MakeSignature;
+import com.itextpdf.text.pdf.security.PdfPKCS7;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -129,14 +132,17 @@ public class PdfSignatureService implements SignatureService {
     }
 
     private static byte[] getPKCS7SignedDataBytes(CertificateData certificateData, PdfSignatureAppearance pdfSignatureAppearance) throws NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, IOException, SignatureException {
-        PdfPKCS7 pdfPKCS7 = new PdfPKCS7(certificateData.privateKey(), certificateData.certificateChain(), null, "SHA-256", null, false);
+        //PdfPKCS7 pdfPKCS7 = new PdfPKCS7(certificateData.privateKey(), certificateData.certificateChain(), null, "SHA-256", null, false);
+        PdfPKCS7 pdfPKCS7 = new PdfPKCS7(certificateData.privateKey(), certificateData.certificateChain(), "SHA-256", null, new BouncyCastleDigest(), false);
         byte[] hashBytes = PdfSignatureService.getHashBytes(pdfSignatureAppearance);
-        Calendar signatureCalendar = pdfSignatureAppearance.getSignDate();
+        //Calendar signatureCalendar = pdfSignatureAppearance.getSignDate();
 
-        byte[] authenticatedAttributeBytes = pdfPKCS7.getAuthenticatedAttributeBytes(hashBytes, signatureCalendar, null);
+        //byte[] authenticatedAttributeBytes = pdfPKCS7.getAuthenticatedAttributeBytes(hashBytes, signatureCalendar, null);
+        byte[] authenticatedAttributeBytes = pdfPKCS7.getAuthenticatedAttributeBytes(hashBytes, null, null, MakeSignature.CryptoStandard.CADES);
         pdfPKCS7.update(authenticatedAttributeBytes, 0, authenticatedAttributeBytes.length);
 
-        byte[] pkcs7SignedDataBytes = pdfPKCS7.getEncodedPKCS7(hashBytes, signatureCalendar, null, null);
+        //byte[] pkcs7SignedDataBytes = pdfPKCS7.getEncodedPKCS7(hashBytes, signatureCalendar, null, null);
+        byte[] pkcs7SignedDataBytes = pdfPKCS7.getEncodedPKCS7(hashBytes, null, null, null, MakeSignature.CryptoStandard.CADES);
 
         byte[] pkcs7SignedDataBytesCopy = new byte[ESTIMATED_CONTENT];
         System.arraycopy(pkcs7SignedDataBytes, 0, pkcs7SignedDataBytesCopy, 0, pkcs7SignedDataBytes.length);
