@@ -12,9 +12,9 @@ public class Main {
         KeyStoreService keyStoreService = new KeyStoreService();
         List<CertificateData> certificateDataList = keyStoreService.getCertificateDataListFromWindowsKeyStore();
         if(certificateDataList != null && !certificateDataList.isEmpty()) {
-            CertificateData dertificateData = certificateDataList.get(0);
+            CertificateData certificateData = certificateDataList.get(0);
             SignatureService signatureService = new PdfSignatureService();
-            signatureService.sign(dertificateData);
+            signatureService.sign(certificateData);
         }
     }
 }
