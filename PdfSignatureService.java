@@ -38,36 +38,36 @@ public class PdfSignatureService implements SignatureService {
 
     @Override
     public boolean sign(CertificateData certificateData, String originFile, String destinationFile) throws Exception {
-    	if(certificateData != null && certificateData.privateKey() != null) {
-	        byte[] documentContent;
-	        try {
-	            Path path = Paths.get(originFile);
-	            documentContent = Files.readAllBytes(path);
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	            throw e;
-	        }
-	
-	        byte[] signatureResult = PdfSignatureService.sign(documentContent, certificateData);
-	
-	        try(FileOutputStream out = new FileOutputStream(destinationFile)) {
-	            out.write(signatureResult);
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	            throw e;
-	        }
-	
-	        System.out.println("pdf signed");
-	        
-	        return true;
-    	} else {
-    		return false;
-    	}
+        if (certificateData != null && certificateData.privateKey() != null) {
+            byte[] documentContent;
+            try {
+                Path path = Paths.get(originFile);
+                documentContent = Files.readAllBytes(path);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw e;
+            }
+
+            byte[] signatureResult = PdfSignatureService.sign(documentContent, certificateData);
+
+            try (FileOutputStream out = new FileOutputStream(destinationFile)) {
+                out.write(signatureResult);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw e;
+            }
+
+            System.out.println("pdf signed");
+
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private static byte[] sign(byte[] documentContent, CertificateData certificateData) throws Exception {
-        try(AutocloseablePdfReader pdfReader = new AutocloseablePdfReader(documentContent);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        try (AutocloseablePdfReader pdfReader = new AutocloseablePdfReader(documentContent);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             PdfStamper pdfStamper = PdfStamper.createSignature(pdfReader, outputStream, '\000', null, true);
             PdfSignatureAppearance pdfSignatureAppearance = PdfSignatureService.getPdfSignatureAppearance(certificateData, pdfStamper);
@@ -92,7 +92,8 @@ public class PdfSignatureService implements SignatureService {
         String location = "Madrid";
         SimpleDateFormat dateFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss Z");
         String formattedCurrentDate = dateFormatter.format(currentDate);
-        String signature = "Signed by " + commonName + "\nReason: " + reason + "\nLocation: " + location + "\nFecha: " + formattedCurrentDate;;
+        String signature = "Signed by " + commonName + "\nReason: " + reason + "\nLocation: " + location + "\nFecha: " + formattedCurrentDate;
+        ;
 
         PdfSignature pdfSignature = new PdfSignature(PdfName.ADOBE_PPKLITE, new PdfName("adbe.pkcs7.detached"));
         pdfSignature.setReason(reason);

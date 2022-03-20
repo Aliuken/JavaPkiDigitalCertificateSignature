@@ -40,108 +40,108 @@ import com.aliuken.pki.model.CertificateData;
 import org.xml.sax.SAXException;
 
 public class XmlSignatureService implements SignatureService {
-	@Override
-	public boolean sign(CertificateData certificateData, String originFile, String destinationFile) throws Exception {
-		if(certificateData != null && certificateData.privateKey() != null) {
-			byte[] documentContent;
-			try {
-				Path path = Paths.get(originFile);
-				documentContent = Files.readAllBytes(path);
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw e;
-			}
-	
-			byte[] signatureResult = XmlSignatureService.sign(documentContent, certificateData);
-	
-			try(FileOutputStream out = new FileOutputStream(destinationFile)) {
-				out.write(signatureResult);
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw e;
-			}
-	
-			System.out.println("xml signed");
-			
-			return true;
-		} else {
-			return false;
-		}
-	}
+    @Override
+    public boolean sign(CertificateData certificateData, String originFile, String destinationFile) throws Exception {
+        if (certificateData != null && certificateData.privateKey() != null) {
+            byte[] documentContent;
+            try {
+                Path path = Paths.get(originFile);
+                documentContent = Files.readAllBytes(path);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw e;
+            }
 
-	private static byte[] sign(byte[] documentContent, CertificateData certificateData) throws Exception {
-		try {
-			XMLSignatureFactory xmlSignatureFactory = XMLSignatureFactory.getInstance("DOM");
-			Reference reference = XmlSignatureService.getReference(xmlSignatureFactory);
-			SignedInfo signedInfo = XmlSignatureService.getSignedInfo(xmlSignatureFactory, reference);
-			KeyInfo keyInfo = XmlSignatureService.getKeyInfo(xmlSignatureFactory, certificateData);
-			Document document = XmlSignatureService.getDocument(documentContent);
+            byte[] signatureResult = XmlSignatureService.sign(documentContent, certificateData);
 
-	        DOMSignContext domSignContext = new DOMSignContext(certificateData.privateKey(), document.getDocumentElement());
-	        domSignContext.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
+            try (FileOutputStream out = new FileOutputStream(destinationFile)) {
+                out.write(signatureResult);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw e;
+            }
 
-	        XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "signatureId", null);
-	        xmlSignature.sign(domSignContext);
+            System.out.println("xml signed");
 
-			byte[] newDocumentBytes = XmlSignatureService.getNewDocumentBytes(document);
-	        return newDocumentBytes;
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw e;
-		}
-	}
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-	private static Reference getReference(XMLSignatureFactory xmlSignatureFactory) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
-		DigestMethod digestMethod = xmlSignatureFactory.newDigestMethod(DigestMethod.SHA256, null);
-		List<Transform> transforms = Collections.singletonList(xmlSignatureFactory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
-		Reference reference = xmlSignatureFactory.newReference("", digestMethod, transforms,null,null);
+    private static byte[] sign(byte[] documentContent, CertificateData certificateData) throws Exception {
+        try {
+            XMLSignatureFactory xmlSignatureFactory = XMLSignatureFactory.getInstance("DOM");
+            Reference reference = XmlSignatureService.getReference(xmlSignatureFactory);
+            SignedInfo signedInfo = XmlSignatureService.getSignedInfo(xmlSignatureFactory, reference);
+            KeyInfo keyInfo = XmlSignatureService.getKeyInfo(xmlSignatureFactory, certificateData);
+            Document document = XmlSignatureService.getDocument(documentContent);
 
-		return reference;
-	}
+            DOMSignContext domSignContext = new DOMSignContext(certificateData.privateKey(), document.getDocumentElement());
+            domSignContext.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
 
-	private static SignedInfo getSignedInfo(XMLSignatureFactory xmlSignatureFactory, Reference reference) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
-		CanonicalizationMethod canonicalizationMethod = xmlSignatureFactory.newCanonicalizationMethod(CanonicalizationMethod.INCLUSIVE, (C14NMethodParameterSpec) null);
-		//SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA1, null);
-		SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA256, null);
-		List<Reference> references = Collections.singletonList(reference);
-		SignedInfo signedInfo = xmlSignatureFactory.newSignedInfo(canonicalizationMethod, signatureMethod, references);
+            XMLSignature xmlSignature = xmlSignatureFactory.newXMLSignature(signedInfo, keyInfo, null, "signatureId", null);
+            xmlSignature.sign(domSignContext);
 
-		return signedInfo;
-	}
+            byte[] newDocumentBytes = XmlSignatureService.getNewDocumentBytes(document);
+            return newDocumentBytes;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
 
-	private static KeyInfo getKeyInfo(XMLSignatureFactory xmlSignatureFactory, CertificateData certificateData) {
-		KeyInfoFactory keyInfoFactory = xmlSignatureFactory.getKeyInfoFactory();
-		X509Certificate publicCertificate = certificateData.publicCertificate();
+    private static Reference getReference(XMLSignatureFactory xmlSignatureFactory) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
+        DigestMethod digestMethod = xmlSignatureFactory.newDigestMethod(DigestMethod.SHA256, null);
+        List<Transform> transforms = Collections.singletonList(xmlSignatureFactory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
+        Reference reference = xmlSignatureFactory.newReference("", digestMethod, transforms, null, null);
 
-		List<Object> x509Content = new ArrayList<>();
-		x509Content.add(publicCertificate.getSubjectX500Principal().getName());
-		x509Content.add(publicCertificate);
+        return reference;
+    }
 
-		X509Data x509Data = keyInfoFactory.newX509Data(x509Content);
-		KeyInfo keyInfo = keyInfoFactory.newKeyInfo(Collections.singletonList(x509Data));
+    private static SignedInfo getSignedInfo(XMLSignatureFactory xmlSignatureFactory, Reference reference) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
+        CanonicalizationMethod canonicalizationMethod = xmlSignatureFactory.newCanonicalizationMethod(CanonicalizationMethod.INCLUSIVE, (C14NMethodParameterSpec) null);
+        //SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA1, null);
+        SignatureMethod signatureMethod = xmlSignatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA256, null);
+        List<Reference> references = Collections.singletonList(reference);
+        SignedInfo signedInfo = xmlSignatureFactory.newSignedInfo(canonicalizationMethod, signatureMethod, references);
 
-		return keyInfo;
-	}
+        return signedInfo;
+    }
 
-	private static Document getDocument(byte[] data) throws ParserConfigurationException, IOException, SAXException {
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-		documentBuilderFactory.setNamespaceAware(true);
+    private static KeyInfo getKeyInfo(XMLSignatureFactory xmlSignatureFactory, CertificateData certificateData) {
+        KeyInfoFactory keyInfoFactory = xmlSignatureFactory.getKeyInfoFactory();
+        X509Certificate publicCertificate = certificateData.publicCertificate();
 
-		InputStream is = new ByteArrayInputStream(data);
-		Document document = documentBuilderFactory.newDocumentBuilder().parse(is);
+        List<Object> x509Content = new ArrayList<>();
+        x509Content.add(publicCertificate.getSubjectX500Principal().getName());
+        x509Content.add(publicCertificate);
 
-		return document;
-	}
+        X509Data x509Data = keyInfoFactory.newX509Data(x509Content);
+        KeyInfo keyInfo = keyInfoFactory.newKeyInfo(Collections.singletonList(x509Data));
 
-	private static byte[] getNewDocumentBytes(Document document) throws TransformerException {
-		TransformerFactory transformerFactory = TransformerFactory.newInstance();
-		Transformer transformer = transformerFactory.newTransformer();
+        return keyInfo;
+    }
 
-		ByteArrayOutputStream newDocument = new ByteArrayOutputStream();
-		transformer.transform(new DOMSource(document), new StreamResult(newDocument));
+    private static Document getDocument(byte[] data) throws ParserConfigurationException, IOException, SAXException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        documentBuilderFactory.setNamespaceAware(true);
 
-		byte[] newDocumentBytes = newDocument.toByteArray();
+        InputStream is = new ByteArrayInputStream(data);
+        Document document = documentBuilderFactory.newDocumentBuilder().parse(is);
 
-		return newDocumentBytes;
-	}
+        return document;
+    }
+
+    private static byte[] getNewDocumentBytes(Document document) throws TransformerException {
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+
+        ByteArrayOutputStream newDocument = new ByteArrayOutputStream();
+        transformer.transform(new DOMSource(document), new StreamResult(newDocument));
+
+        byte[] newDocumentBytes = newDocument.toByteArray();
+
+        return newDocumentBytes;
+    }
 }
