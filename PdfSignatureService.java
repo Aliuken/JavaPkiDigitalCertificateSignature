@@ -34,33 +34,38 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 
 public class PdfSignatureService implements SignatureService {
-    private static final int ESTIMATED_CONTENT = 8192;
+    private static final int ESTIMATED_CONTENT = 32768;
 
     @Override
-    public void sign(CertificateData certificateData) {
-        byte[] documentContent;
-        try {
-            Path path = Paths.get("C:\\documents\\test.pdf");
-            documentContent = Files.readAllBytes(path);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
-        byte[] signatureResult = this.sign(documentContent, certificateData);
-
-        try(FileOutputStream out = new FileOutputStream("C:\\documents\\test_signed.pdf")) {
-            out.write(signatureResult);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
-        System.out.println("pdf signed");
+    public boolean sign(CertificateData certificateData, String originFile, String destinationFile) throws Exception {
+    	if(certificateData != null && certificateData.privateKey() != null) {
+	        byte[] documentContent;
+	        try {
+	            Path path = Paths.get(originFile);
+	            documentContent = Files.readAllBytes(path);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            throw e;
+	        }
+	
+	        byte[] signatureResult = PdfSignatureService.sign(documentContent, certificateData);
+	
+	        try(FileOutputStream out = new FileOutputStream(destinationFile)) {
+	            out.write(signatureResult);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            throw e;
+	        }
+	
+	        System.out.println("pdf signed");
+	        
+	        return true;
+    	} else {
+    		return false;
+    	}
     }
 
-    @Override
-    public byte[] sign(byte[] documentContent, CertificateData certificateData) {
+    private static byte[] sign(byte[] documentContent, CertificateData certificateData) throws Exception {
         try(AutocloseablePdfReader pdfReader = new AutocloseablePdfReader(documentContent);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
@@ -75,7 +80,7 @@ public class PdfSignatureService implements SignatureService {
             return result;
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            throw e;
         }
     }
 

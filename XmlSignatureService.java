@@ -41,30 +41,35 @@ import org.xml.sax.SAXException;
 
 public class XmlSignatureService implements SignatureService {
 	@Override
-	public void sign(CertificateData certificateData) {
-		byte[] documentContent;
-		try {
-			Path path = Paths.get("C:\\documents\\test.xml");
-			documentContent = Files.readAllBytes(path);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return;
+	public boolean sign(CertificateData certificateData, String originFile, String destinationFile) throws Exception {
+		if(certificateData != null && certificateData.privateKey() != null) {
+			byte[] documentContent;
+			try {
+				Path path = Paths.get(originFile);
+				documentContent = Files.readAllBytes(path);
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
+			}
+	
+			byte[] signatureResult = XmlSignatureService.sign(documentContent, certificateData);
+	
+			try(FileOutputStream out = new FileOutputStream(destinationFile)) {
+				out.write(signatureResult);
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
+			}
+	
+			System.out.println("xml signed");
+			
+			return true;
+		} else {
+			return false;
 		}
-
-		byte[] signatureResult = this.sign(documentContent, certificateData);
-
-		try(FileOutputStream out = new FileOutputStream("C:\\documents\\test_signed.xml")) {
-			out.write(signatureResult);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return;
-		}
-
-		System.out.println("xml signed");
 	}
 
-	@Override
-	public byte[] sign(byte[] documentContent, CertificateData certificateData) {
+	private static byte[] sign(byte[] documentContent, CertificateData certificateData) throws Exception {
 		try {
 			XMLSignatureFactory xmlSignatureFactory = XMLSignatureFactory.getInstance("DOM");
 			Reference reference = XmlSignatureService.getReference(xmlSignatureFactory);
@@ -82,7 +87,7 @@ public class XmlSignatureService implements SignatureService {
 	        return newDocumentBytes;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			throw e;
 		}
 	}
 
