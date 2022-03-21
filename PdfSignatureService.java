@@ -12,7 +12,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 
-import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfDate;
 import com.itextpdf.text.pdf.PdfDictionary;
@@ -69,11 +68,22 @@ public class PdfSignatureService implements SignatureService {
         try (AutocloseablePdfReader pdfReader = new AutocloseablePdfReader(documentContent);
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
+            // get pdfSignatureAppearance
             PdfStamper pdfStamper = PdfStamper.createSignature(pdfReader, outputStream, '\000', null, true);
             PdfSignatureAppearance pdfSignatureAppearance = PdfSignatureService.getPdfSignatureAppearance(certificateData, pdfStamper);
 
-            System.out.println(pdfReader.getFileLength());
-            PdfSignatureService.signEnding(certificateData, pdfSignatureAppearance);
+            // pdfSignatureAppearance.preClose
+            HashMap<PdfName, Integer> exclusionSizes = new HashMap<>();
+            exclusionSizes.put(PdfName.CONTENTS, Integer.valueOf(ESTIMATED_CONTENT * 2 + 2));
+
+            pdfSignatureAppearance.preClose(exclusionSizes);
+
+            // pdfSignatureAppearance.close
+            byte[] hashBytes = PdfSignatureService.getHashBytes(pdfSignatureAppearance);
+            PdfDictionary pdfDictionary = PdfSignatureService.getPdfDictionary(certificateData, hashBytes);
+
+            pdfSignatureAppearance.close(pdfDictionary);
+
             outputStream.flush();
 
             byte[] result = outputStream.toByteArray();
@@ -120,18 +130,6 @@ public class PdfSignatureService implements SignatureService {
         RDN cn = x500name.getRDNs(BCStyle.CN)[0];
 
         return IETFUtils.valueToString(cn.getFirst().getValue());
-    }
-
-    private static void signEnding(CertificateData certificateData, PdfSignatureAppearance pdfSignatureAppearance) throws DocumentException, IOException, NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, SignatureException {
-        HashMap<PdfName, Integer> exclusionSizes = new HashMap<>();
-        exclusionSizes.put(PdfName.CONTENTS, Integer.valueOf(ESTIMATED_CONTENT * 2 + 2));
-
-        pdfSignatureAppearance.preClose(exclusionSizes);
-
-        byte[] hashBytes = PdfSignatureService.getHashBytes(pdfSignatureAppearance);
-        PdfDictionary pdfDictionary = PdfSignatureService.getPdfDictionary(certificateData, hashBytes);
-
-        pdfSignatureAppearance.close(pdfDictionary);
     }
 
     private static byte[] getHashBytes(PdfSignatureAppearance pdfSignatureAppearance) throws IOException, NoSuchAlgorithmException {
